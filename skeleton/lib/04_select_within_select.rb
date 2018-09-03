@@ -1,3 +1,4 @@
+require 'byebug'
 # == Schema Information
 #
 # Table name: countries
@@ -35,6 +36,19 @@ end
 def larger_than_russia
   # List each country name where the population is larger than 'Russia'.
   execute(<<-SQL)
+  SELECT
+    name
+  FROM
+    countries
+  WHERE
+    population > (
+      SELECT
+        population
+      FROM
+        countries
+      WHERE
+        name='Russia'
+      )
   SQL
 end
 
@@ -42,6 +56,19 @@ def richer_than_england
   # Show the countries in Europe with a per capita GDP greater than
   # 'United Kingdom'.
   execute(<<-SQL)
+  SELECT
+    name
+  FROM
+    countries
+  WHERE
+    continent = 'Europe' AND gdp / population > (
+      SELECT
+        gdp / population
+      FROM
+        countries
+      WHERE
+        name='United Kingdom'
+    )
   SQL
 end
 
@@ -49,13 +76,39 @@ def neighbors_of_certain_b_countries
   # List the name and continent of countries in the continents containing
   # 'Belize', 'Belgium'.
   execute(<<-SQL)
+  SELECT
+    name, continent
+  FROM
+    countries
+  WHERE
+    continent IN (
+      SELECT
+        continent
+      FROM
+        countries
+      WHERE
+        name IN ('Belize', 'Belgium')
+    )
   SQL
 end
 
 def population_constraint
   # Which country has a population that is more than Canada but less than
   # Poland? Show the name and the population.
+  poland_pop = execute(<<-SQL)
+    SELECT population FROM countries WHERE name = 'Poland'
+  SQL
+  ca_pop = execute(<<-SQL)
+    SELECT population FROM countries WHERE name = 'Canada'
+  SQL
+  
   execute(<<-SQL)
+    SELECT
+      name, population
+    FROM
+      countries
+    WHERE
+      population > #{ca_pop[0][0].to_i} AND population < #{poland_pop[0][0].to_i}
   SQL
 end
 
@@ -64,6 +117,24 @@ def sparse_continents
   # population is less than 25,000,000. Show name, continent and
   # population.
   # Hint: Sometimes rewording the problem can help you see the solution.
-  execute(<<-SQL)
+  
+  small_continents = execute(<<-SQL)
+    SELECT
+      continent
+    FROM
+      countries
+    GROUP BY
+      continent
+    HAVING
+      MAX(population) < 25000000
   SQL
+  execute(<<-SQL)
+  SELECT
+    name, continent, population
+  FROM
+    countries
+  WHERE
+    continent = '#{small_continents[0][0]}'
+  SQL
+  
 end
